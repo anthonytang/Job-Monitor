@@ -766,31 +766,40 @@ export async function scrapeJobTitlesFromUrlDetailed(
     }
 
     log("Launching browser");
-    // On Vercel (and similar serverless), the Playwright-installed browser isn't available at runtime.
-    // Use @sparticuz/chromium, which bundles a serverless-compatible Chromium.
-    const useServerlessChromium =
-      process.env.VERCEL === "1" || process.env.USE_SERVERLESS_CHROMIUM === "1";
-    if (useServerlessChromium) {
-      const sparticuz = await import("@sparticuz/chromium");
-      const executablePath = await sparticuz.default.executablePath();
-      log(`Using serverless Chromium: ${executablePath}`);
-      browser = await chromium.launch({
-        headless: true,
-        executablePath,
-        args: [
-          ...sparticuz.default.args,
-          "--disable-blink-features=AutomationControlled",
-        ],
-      });
+    // 1) Remote browser (Browserless, etc.): no local Chromium needed; works on Vercel.
+    //    Vercel's runtime lacks libnss3 etc., so @sparticuz/chromium fails there with "libnss3.so: not found".
+    const remoteWs =
+      process.env.PLAYWRIGHT_REMOTE_WS_URL ?? process.env.BROWSERLESS_URL;
+    if (remoteWs) {
+      const wsUrl = remoteWs.startsWith("ws") ? remoteWs : `wss://${remoteWs}`;
+      log(`Connecting to remote browser: ${wsUrl.replace(/token=[^&]+/, "token=***")}`);
+      browser = await chromium.connectOverCDP(wsUrl);
     } else {
-      browser = await chromium.launch({
-        headless: true,
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-blink-features=AutomationControlled",
-        ],
-      });
+      // 2) Local launch (default for dev); or @sparticuz/chromium where supported (e.g. AWS Lambda).
+      const useServerlessChromium =
+        process.env.VERCEL === "1" || process.env.USE_SERVERLESS_CHROMIUM === "1";
+      if (useServerlessChromium) {
+        const sparticuz = await import("@sparticuz/chromium");
+        const executablePath = await sparticuz.default.executablePath();
+        log(`Using serverless Chromium: ${executablePath}`);
+        browser = await chromium.launch({
+          headless: true,
+          executablePath,
+          args: [
+            ...sparticuz.default.args,
+            "--disable-blink-features=AutomationControlled",
+          ],
+        });
+      } else {
+        browser = await chromium.launch({
+          headless: true,
+          args: [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-blink-features=AutomationControlled",
+          ],
+        });
+      }
     }
 
     // Optional: use a proxy (e.g. residential) so job sites don't block datacenter IPs (Vercel).

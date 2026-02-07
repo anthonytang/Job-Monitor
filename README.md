@@ -56,11 +56,20 @@ When you run the app **locally**, requests use your home or office IP. When you 
 
 ### How to fix it on the deployed site
 
-1. **Give scrapes more time**  
+1. **Use a remote browser (recommended on Vercel)**  
+   Vercel’s serverless runtime doesn’t include system libraries (e.g. `libnss3`) that Chromium needs, so running Chromium *on* Vercel fails with “libnss3.so: not found”. Use a **remote browser** so the browser runs elsewhere and the app connects over the network:
+   - Sign up for [Browserless](https://www.browserless.io/) (or another Playwright-compatible CDP host).
+   - Get your WebSocket URL (e.g. `wss://production-sfo.browserless.io?token=YOUR_API_TOKEN`).
+   - In Vercel: Project → Settings → Environment Variables, add:
+     - **Name:** `PLAYWRIGHT_REMOTE_WS_URL`  
+     - **Value:** your WebSocket URL (e.g. `wss://production-sfo.browserless.io?token=...`)
+   - Redeploy. Scraping will use the remote browser; no local Chromium on Vercel.
+
+2. **Give scrapes more time**  
    The dashboard is configured with `maxDuration = 120` so each link has up to 2 minutes. On Vercel Pro you can raise this (e.g. 300) in `app/dashboard/page.tsx` if needed.
 
-2. **Use a residential proxy (best fix for “only some links work”)**  
-   So job sites see a normal-looking IP instead of Vercel’s datacenter:
+3. **Use a residential proxy (if some links still return 0 jobs)**  
+   So job sites see a normal-looking IP instead of a datacenter:
    - Sign up with a provider that offers **residential** or “real user” proxies (e.g. Bright Data, Oxylabs, Smartproxy). Datacenter proxies are often blocked too.
    - Get a proxy URL (often `http://user:pass@gate.example.com:port`).
    - In Vercel: Project → Settings → Environment Variables, add:
@@ -68,7 +77,7 @@ When you run the app **locally**, requests use your home or office IP. When you 
      - **Value:** your proxy URL (e.g. `http://user:pass@residential.example.com:8080`)
    - Redeploy. All scraping will go through the proxy, so you’ll usually get jobs for all links as on local.
 
-   Leave `PLAYWRIGHT_PROXY_URL` unset locally if you don’t need a proxy there.
+   Leave `PLAYWRIGHT_PROXY_URL` unset locally if you don’t need it there.
 
 ## Security (Vercel / production)
 
