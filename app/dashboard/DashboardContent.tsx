@@ -257,100 +257,115 @@ export function DashboardContent({ initialLinks }: { initialLinks: LinkRow[] }) 
           </div>
         )}
 
-        {/* Results: links with new jobs */}
+        {/* Results: all monitored links (with new jobs highlighted) */}
         {results !== null && (
           <div className="mt-8 rounded-xl border border-zinc-700 bg-zinc-800/30 p-6">
             <h3 className="font-semibold text-white">
-              {linksWithNewJobs.length > 0
-                ? `Links with new jobs (${linksWithNewJobs.length})`
-                : results.length > 0 && results.some((r) => r.jobTitles.length > 0)
-                ? "No new jobs found (all jobs match previous scrape)"
-                : "No jobs found"}
+              {results.length > 0
+                ? `Monitor results (${results.length} link${results.length === 1 ? "" : "s"})`
+                : "No links to monitor"}
             </h3>
-            {linksWithNewJobs.length === 0 ? (
-              <div className="mt-2 space-y-2">
-                <p className="text-sm text-zinc-400">
-                  {results.length > 0 && results.some((r) => r.jobTitles.length > 0)
-                    ? "All jobs match the previous scrape. No new listings detected."
-                    : "The scraper didn't find any job titles. This might mean:"}
-                </p>
-                {results.length > 0 && results.every((r) => r.jobTitles.length === 0) && (
-                  <ul className="ml-4 list-disc space-y-1 text-sm text-zinc-500">
-                    <li>The page structure doesn't match common patterns</li>
-                    <li>The page requires JavaScript to load content</li>
-                    <li>The selectors need to be customized for this site</li>
-                  </ul>
+            {results.length === 0 ? null : (
+              <>
+                {linksWithNewJobs.length > 0 && (
+                  <p className="mt-1 text-sm text-cyan-400">
+                    {linksWithNewJobs.length} link{linksWithNewJobs.length === 1 ? "" : "s"} with new jobs.
+                  </p>
                 )}
-              </div>
-            ) : (
-              <ul className="mt-4 space-y-4">
-                {linksWithNewJobs.map((item) => (
-                  <li
-                    key={item.linkId}
-                    className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4"
-                  >
-                    <div className="flex flex-col gap-3">
-                      <div className="min-w-0">
-                        <span className="font-medium text-white">
-                          {item.company || "Unnamed"}
-                        </span>
-                        <p className="mt-0.5 break-all text-sm text-zinc-400">
-                          {item.primaryUrl}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <a
-                          href={`/out?url=${encodeURIComponent(item.primaryUrl)}`}
-                          className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-cyan-300"
-                        >
-                          Open link
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandId(expandId === item.linkId ? null : item.linkId)
-                          }
-                          className="rounded-lg border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white"
-                        >
-                          {expandId === item.linkId ? "Hide jobs" : "More info"}
-                        </button>
-                      </div>
-                    </div>
-                    {expandId === item.linkId && (
-                      <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-800/50 p-4">
-                        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
-                          Job titles
-                        </p>
-                        <ul className="space-y-1.5">
-                          {item.jobTitles.length === 0 ? (
-                            <li className="text-sm text-zinc-500">
-                              No titles extracted (page may use different markup).
-                            </li>
-                          ) : (
-                            item.jobTitles.map((title, i) => (
-                              <li key={i} className="text-sm text-zinc-300">
-                                • {title}
-                              </li>
-                            ))
-                          )}
-                        </ul>
-                        {item.debug?.debugMessages?.length ? (
-                          <details className="mt-4">
-                            <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500">
-                              Debug log
-                            </summary>
-                            <div className="mt-2 space-y-0.5 font-mono text-[10px] text-zinc-500 max-h-40 overflow-y-auto rounded bg-zinc-900/60 p-2">
-                              {item.debug.debugMessages.map((msg, idx) => (
-                                <div key={idx} className="whitespace-pre-wrap break-words">{msg}</div>
-                              ))}
-                            </div>
-                          </details>
-                        ) : null}
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                {results.some((r) => r.jobTitles.length === 0) && (
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Some links returned no jobs (timeout or blocked on server). Running locally often works for all links.
+                  </p>
+                )}
+                <ul className="mt-4 space-y-4">
+                  {results.map((item) => {
+                    const hasJobs = item.jobTitles.length > 0;
+                    const isNew = item.hasNewJobs;
+                    return (
+                      <li
+                        key={item.linkId}
+                        className={`rounded-xl border p-4 ${
+                          hasJobs
+                            ? isNew
+                              ? "border-cyan-500/30 bg-cyan-500/5"
+                              : "border-zinc-600 bg-zinc-800/20"
+                            : "border-zinc-700 bg-zinc-800/10"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-3">
+                          <div className="min-w-0 flex flex-wrap items-center gap-2">
+                            <span className="font-medium text-white">
+                              {item.company || "Unnamed"}
+                            </span>
+                            <span className="text-xs text-zinc-500">
+                              {item.jobTitles.length} job{item.jobTitles.length === 1 ? "" : "s"}
+                              {isNew && hasJobs && " · new"}
+                              {!hasJobs && " (none found)"}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 break-all text-sm text-zinc-400">
+                            {item.primaryUrl}
+                          </p>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <a
+                              href={`/out?url=${encodeURIComponent(item.primaryUrl)}`}
+                              className="rounded-lg bg-cyan-400 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-cyan-300"
+                            >
+                              Open link
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandId(expandId === item.linkId ? null : item.linkId)
+                              }
+                              className="rounded-lg border border-zinc-600 px-4 py-2 text-sm font-medium text-zinc-300 hover:border-zinc-500 hover:text-white"
+                            >
+                              {expandId === item.linkId ? "Hide jobs" : "More info"}
+                            </button>
+                          </div>
+                        </div>
+                        {expandId === item.linkId && (
+                          <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-800/50 p-4">
+                            <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+                              Job titles
+                            </p>
+                            <ul className="space-y-1.5">
+                              {item.jobTitles.length === 0 ? (
+                                <li className="text-sm text-zinc-500">
+                                  No titles extracted (page may use different markup, or timed out / blocked on server).
+                                </li>
+                              ) : (
+                                item.jobTitles.map((title, i) => (
+                                  <li key={i} className="text-sm text-zinc-300">
+                                    • {title}
+                                  </li>
+                                ))
+                              )}
+                            </ul>
+                            {item.debug?.debugMessages?.length ? (
+                              <details className="mt-4">
+                                <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500">
+                                  Debug log
+                                </summary>
+                                <div className="mt-2 space-y-0.5 font-mono text-[10px] text-zinc-500 max-h-40 overflow-y-auto rounded bg-zinc-900/60 p-2">
+                                  {item.debug.debugMessages.map((msg, idx) => (
+                                    <div key={idx} className="whitespace-pre-wrap break-words">{msg}</div>
+                                  ))}
+                                </div>
+                              </details>
+                            ) : null}
+                            {item.debug?.blockedHint && (
+                              <p className="mt-2 text-xs text-amber-500">
+                                Hint: {item.debug.blockedHint}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
           </div>
         )}

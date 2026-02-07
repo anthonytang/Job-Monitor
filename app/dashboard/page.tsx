@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getPublicUserIdByEmail } from "@/lib/db/users";
 import { DashboardContent } from "./DashboardContent";
 
+// Allow long-running scrapes when "Get monitor results" runs (Vercel: up to plan limit, e.g. 300s)
+export const maxDuration = 120;
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {

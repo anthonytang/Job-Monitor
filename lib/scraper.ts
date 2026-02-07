@@ -775,11 +775,28 @@ export async function scrapeJobTitlesFromUrlDetailed(
       ],
     });
 
+    // Optional: use a proxy (e.g. residential) so job sites don't block datacenter IPs (Vercel).
+    const proxyUrl =
+      process.env.PLAYWRIGHT_PROXY_URL ?? process.env.HTTPS_PROXY ?? process.env.HTTP_PROXY;
+    let proxy: { server: string; username?: string; password?: string } | undefined;
+    if (proxyUrl) {
+      try {
+        const u = new URL(proxyUrl);
+        proxy = { server: `${u.protocol}//${u.hostname}:${u.port || (u.protocol === "https:" ? "443" : "80")}` };
+        if (u.username) proxy.username = decodeURIComponent(u.username);
+        if (u.password) proxy.password = decodeURIComponent(u.password);
+        log(`Using proxy: ${proxy.server}`);
+      } catch {
+        log(`Invalid proxy URL, skipping proxy`);
+      }
+    }
+
     const context = await browser.newContext({
       userAgent:
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       viewport: { width: 1280, height: 800 },
       locale: "en-US",
+      ...(proxy && { proxy }),
     });
 
     await context.addInitScript(() => {

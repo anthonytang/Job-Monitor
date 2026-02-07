@@ -40,6 +40,36 @@ Monitor job search pages. Add filtered job URLs (LinkedIn, Indeed, company caree
 
 **Scraping:** Uses Playwright (headless Chromium) to render JavaScript-heavy pages, then extracts job titles using common HTML patterns. Falls back to simple fetch for static pages. Results depend on each site’s HTML structure—some sites may need custom selectors.
 
+## Why do I get jobs for all links locally but only some on the deployed site?
+
+When you run the app **locally**, requests use your home or office IP. When you run it **on Vercel**, requests use that provider's **datacenter IP**.
+
+- **Bot blocking / different content**  
+  Many job and career sites (ATS, hospital career pages, etc.) treat datacenter traffic differently: they may block it, show a captcha, or serve a minimal page with no job list. The scraper then "succeeds" but gets HTML with zero job titles.  
+  Locally, the same sites often allow your IP and return the full page, so you see jobs for all 5 links. On the deployed app, some domains don't block Vercel's IP (so you get jobs for e.g. MD Anderson - MA and PCT) and others return blocked or empty pages → 0 jobs. That's the main reason you see "all 5 locally, only 2 on deployed."
+
+- **Timeouts**  
+  Each link is scraped in a separate serverless call. A single scrape can take 30–90+ seconds (page load, network idle, extraction). If the host's function timeout (e.g. 10–60s) is hit, that run is cut off and may return empty. Slower pages can show 0 jobs on the deployed app even when they work locally. You can raise the limit (e.g. `maxDuration` in Vercel) to give each scrape more time.
+
+- **What you can do**  
+  For the most reliable results across all links, run "Get monitor results" **locally**. The UI now shows every link's result (including "0 jobs") so you can see which links work on the deployed site.
+
+### How to fix it on the deployed site
+
+1. **Give scrapes more time**  
+   The dashboard is configured with `maxDuration = 120` so each link has up to 2 minutes. On Vercel Pro you can raise this (e.g. 300) in `app/dashboard/page.tsx` if needed.
+
+2. **Use a residential proxy (best fix for “only some links work”)**  
+   So job sites see a normal-looking IP instead of Vercel’s datacenter:
+   - Sign up with a provider that offers **residential** or “real user” proxies (e.g. Bright Data, Oxylabs, Smartproxy). Datacenter proxies are often blocked too.
+   - Get a proxy URL (often `http://user:pass@gate.example.com:port`).
+   - In Vercel: Project → Settings → Environment Variables, add:
+     - **Name:** `PLAYWRIGHT_PROXY_URL`  
+     - **Value:** your proxy URL (e.g. `http://user:pass@residential.example.com:8080`)
+   - Redeploy. All scraping will go through the proxy, so you’ll usually get jobs for all links as on local.
+
+   Leave `PLAYWRIGHT_PROXY_URL` unset locally if you don’t need a proxy there.
+
 ## Security (Vercel / production)
 
 - **Secrets:** Never commit `.env.local`. In Vercel, set env vars in Project → Settings → Environment Variables. Use only the Supabase **anon** key; RLS protects data.
