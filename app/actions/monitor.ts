@@ -15,6 +15,8 @@ export type MonitorResultItem = {
   urls: string[];
   hasNewJobs: boolean;
   jobTitles: string[];
+  /** Only jobs that weren't in the previous scrape (so we can show "new" only). */
+  newJobTitles: string[];
   primaryUrl: string;
   debug?: ScrapeDebug;
 };
@@ -144,12 +146,13 @@ export async function saveMonitorResults(
     const previousFingerprints = new Set(
       previousRecords.map((j) => jobRecordFingerprint(j))
     );
+    const newRecords = item.jobRecords.filter(
+      (j) => !previousFingerprints.has(jobRecordFingerprint(j))
+    );
+    const newJobTitles = [...new Set(newRecords.map((j) => j.title))];
     const hasNewJobs =
       item.jobRecords.length > 0 &&
-      (previousFingerprints.size === 0 ||
-        item.jobRecords.some(
-          (j) => !previousFingerprints.has(jobRecordFingerprint(j))
-        ));
+      (previousFingerprints.size === 0 || newRecords.length > 0);
 
     await supabase.from("scrape_results").insert({
       link_id: item.linkId,
@@ -163,6 +166,7 @@ export async function saveMonitorResults(
       urls: item.urls,
       hasNewJobs,
       jobTitles: item.jobTitles,
+      newJobTitles,
       primaryUrl: item.primaryUrl,
       debug: item.debug,
     });
@@ -224,12 +228,13 @@ export async function runMonitor(): Promise<{
     const previousFingerprints = new Set(
       previousRecords.map((j) => jobRecordFingerprint(j))
     );
+    const newRecords = jobRecords.filter(
+      (j) => !previousFingerprints.has(jobRecordFingerprint(j))
+    );
+    const newJobTitles = [...new Set(newRecords.map((j) => j.title))];
     const hasNewJobs =
       jobRecords.length > 0 &&
-      (previousFingerprints.size === 0 ||
-        jobRecords.some(
-          (j) => !previousFingerprints.has(jobRecordFingerprint(j))
-        ));
+      (previousFingerprints.size === 0 || newRecords.length > 0);
 
     // Save this scrape
     await supabase.from("scrape_results").insert({
@@ -244,6 +249,7 @@ export async function runMonitor(): Promise<{
       urls,
       hasNewJobs,
       jobTitles,
+      newJobTitles,
       primaryUrl,
       debug,
     });

@@ -298,9 +298,11 @@ export function DashboardContent({ initialLinks }: { initialLinks: LinkRow[] }) 
                               {item.company || "Unnamed"}
                             </span>
                             <span className="text-xs text-zinc-500">
-                              {item.jobTitles.length} job{item.jobTitles.length === 1 ? "" : "s"}
-                              {isNew && hasJobs && " · new"}
-                              {!hasJobs && " (none found)"}
+                              {hasJobs
+                                ? isNew
+                                  ? `${item.newJobTitles.length} new job${item.newJobTitles.length === 1 ? "" : "s"} (${item.jobTitles.length} total)`
+                                  : `${item.jobTitles.length} job${item.jobTitles.length === 1 ? "" : "s"} (no new since last check)`
+                                : "0 jobs (none found)"}
                             </span>
                           </div>
                           <p className="mt-0.5 break-all text-sm text-zinc-400">
@@ -327,19 +329,27 @@ export function DashboardContent({ initialLinks }: { initialLinks: LinkRow[] }) 
                         {expandId === item.linkId && (
                           <div className="mt-4 rounded-lg border border-zinc-700 bg-zinc-800/50 p-4">
                             <p className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
-                              Job titles
+                              {item.hasNewJobs ? "New jobs since last check" : "Job titles"}
                             </p>
                             <ul className="space-y-1.5">
                               {item.jobTitles.length === 0 ? (
                                 <li className="text-sm text-zinc-500">
                                   No titles extracted (page may use different markup, or timed out / blocked on server).
                                 </li>
-                              ) : (
-                                item.jobTitles.map((title, i) => (
+                              ) : item.hasNewJobs && item.newJobTitles.length > 0 ? (
+                                item.newJobTitles.map((title, i) => (
                                   <li key={i} className="text-sm text-zinc-300">
                                     • {title}
                                   </li>
                                 ))
+                              ) : item.hasNewJobs && item.newJobTitles.length === 0 ? (
+                                <li className="text-sm text-zinc-500">
+                                  No new jobs (all {item.jobTitles.length} match the previous scrape).
+                                </li>
+                              ) : (
+                                <li className="text-sm text-zinc-500">
+                                  No new jobs since last check ({item.jobTitles.length} total).
+                                </li>
                               )}
                             </ul>
                             {item.debug?.debugMessages?.length ? (
