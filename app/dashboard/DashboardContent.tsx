@@ -265,20 +265,17 @@ export function DashboardContent({ initialLinks }: { initialLinks: LinkRow[] }) 
                 ? `Monitor results (${results.length} link${results.length === 1 ? "" : "s"})`
                 : "No links to monitor"}
             </h3>
-            {results.length === 0 ? null : (
+            {results.length === 0 ? null : linksWithNewJobs.length === 0 ? (
+              <p className="mt-4 text-sm text-zinc-400">
+                No new jobs since your last check.
+              </p>
+            ) : (
               <>
-                {linksWithNewJobs.length > 0 && (
-                  <p className="mt-1 text-sm text-cyan-400">
-                    {linksWithNewJobs.length} link{linksWithNewJobs.length === 1 ? "" : "s"} with new jobs.
-                  </p>
-                )}
-                {results.some((r) => r.jobTitles.length === 0) && (
-                  <p className="mt-1 text-sm text-zinc-500">
-                    Some links returned no jobs (timeout or blocked on server). Running locally often works for all links.
-                  </p>
-                )}
+                <p className="mt-1 text-sm text-cyan-400">
+                  {linksWithNewJobs.length} link{linksWithNewJobs.length === 1 ? "" : "s"} with new jobs.
+                </p>
                 <ul className="mt-4 space-y-4">
-                  {results.map((item) => {
+                  {results.filter((r) => r.hasNewJobs).map((item) => {
                     const hasJobs = item.jobTitles.length > 0;
                     const isNew = item.hasNewJobs;
                     return (
@@ -352,23 +349,6 @@ export function DashboardContent({ initialLinks }: { initialLinks: LinkRow[] }) 
                                 </li>
                               )}
                             </ul>
-                            {item.debug?.debugMessages?.length ? (
-                              <details className="mt-4">
-                                <summary className="cursor-pointer select-none text-xs font-medium text-zinc-500">
-                                  Debug log
-                                </summary>
-                                <div className="mt-2 space-y-0.5 font-mono text-[10px] text-zinc-500 max-h-40 overflow-y-auto rounded bg-zinc-900/60 p-2">
-                                  {item.debug.debugMessages.map((msg, idx) => (
-                                    <div key={idx} className="whitespace-pre-wrap break-words">{msg}</div>
-                                  ))}
-                                </div>
-                              </details>
-                            ) : null}
-                            {item.debug?.blockedHint && (
-                              <p className="mt-2 text-xs text-amber-500">
-                                Hint: {item.debug.blockedHint}
-                              </p>
-                            )}
                           </div>
                         )}
                       </li>
