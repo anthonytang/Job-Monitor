@@ -766,14 +766,32 @@ export async function scrapeJobTitlesFromUrlDetailed(
     }
 
     log("Launching browser");
-    browser = await chromium.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-blink-features=AutomationControlled",
-      ],
-    });
+    // On Vercel (and similar serverless), the Playwright-installed browser isn't available at runtime.
+    // Use @sparticuz/chromium, which bundles a serverless-compatible Chromium.
+    const useServerlessChromium =
+      process.env.VERCEL === "1" || process.env.USE_SERVERLESS_CHROMIUM === "1";
+    if (useServerlessChromium) {
+      const sparticuz = await import("@sparticuz/chromium");
+      const executablePath = await sparticuz.default.executablePath();
+      log(`Using serverless Chromium: ${executablePath}`);
+      browser = await chromium.launch({
+        headless: true,
+        executablePath,
+        args: [
+          ...sparticuz.default.args,
+          "--disable-blink-features=AutomationControlled",
+        ],
+      });
+    } else {
+      browser = await chromium.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-blink-features=AutomationControlled",
+        ],
+      });
+    }
 
     // Optional: use a proxy (e.g. residential) so job sites don't block datacenter IPs (Vercel).
     const proxyUrl =
