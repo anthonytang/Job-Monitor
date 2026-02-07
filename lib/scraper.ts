@@ -48,7 +48,7 @@ function stripHtml(input: string): string {
   // If it looks like HTML, use cheerio to decode/strip tags.
   if (s.includes("<") && s.includes(">")) {
     const $ = cheerio.load(s);
-    return $.text().trim().replace(/\s+/g, " ");
+    return $.root().text().trim().replace(/\s+/g, " ");
   }
   return s.replace(/\s+/g, " ").trim();
 }
@@ -783,7 +783,6 @@ export async function scrapeJobTitlesFromUrlDetailed(
     });
 
     await context.addInitScript(() => {
-      // @ts-expect-error webdriver is not in TS lib
       Object.defineProperty(navigator, "webdriver", { get: () => undefined });
     });
 
